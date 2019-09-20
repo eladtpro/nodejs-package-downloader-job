@@ -1,0 +1,22 @@
+{
+  "name": "orca",
+  "version": "1.0.0",
+  "description": "artifact manager",
+  "main": "app.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "debug": "node --nolazy --inspect-brk=9229 app.ts",
+    "start": "node app.ts"
+  },
+  "author": "Elad Tal",
+  "license": "ISC",
+  "dependencies": {
+    "@azure/cosmos": "^3.2.0",
+    "@types/dotenv": "^6.1.1",
+    "@types/node": "^12.7.5",
+    "dotenv": "^8.1.0",
+    "verdaccio": "^4.2.2"
+  },
+  "devDependencies": {}
+}
