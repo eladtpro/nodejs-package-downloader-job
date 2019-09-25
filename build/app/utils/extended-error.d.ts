@@ -1,4 +1,9 @@
-declare class ExtendedError extends Error {
-    constructor(message: string, error: Error);
-    readonly original: Error;
+export interface Data {
+    message?: string;
+    error?: Error;
+    key?: string;
+}
+export declare class ExtendedError extends Error {
+    constructor(data: Data);
+    readonly data: Data;
 }

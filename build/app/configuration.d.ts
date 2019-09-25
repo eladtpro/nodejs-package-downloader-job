@@ -1,16 +1,21 @@
 /// <reference types="node" />
 import { CosmosClientOptions } from '@azure/cosmos';
+import { Config } from '@verdaccio/types';
 import { PathLike } from 'fs';
+import { Url } from 'url';
 export interface CosmosConfiguration extends CosmosClientOptions {
     database: string;
     container?: string;
 }
 export interface VerdaccioConfiguration {
-    storage: PathLike;
-    app: PathLike;
-    host: PathLike;
-    port: number;
-    minUptime: number;
+    maxUptimeSec: number;
+    workingDir: PathLike;
+    installTimeout: number;
+    serverConfig: Config;
+    serverConfigPath: PathLike;
+    serverVersion: string;
+    serverTitle: string;
+    url: Url;
 }
 export declare class Configuration {
     private static _current;

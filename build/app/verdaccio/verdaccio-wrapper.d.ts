@@ -15,5 +15,5 @@ export declare class VerdaccioWrapper {
     readonly busy: boolean;
     install(requests: Request[]): void;
     private installOne;
-    private shutdown;
+    private startVerdaccio;
 }

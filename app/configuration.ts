@@ -1,6 +1,10 @@
 import { CosmosClientOptions } from '@azure/cosmos';
+import { Config } from '@verdaccio/types';
 import { config } from 'dotenv';
-import { PathLike } from 'fs';
+import { PathLike, readFileSync } from 'fs';
+import { safeLoad } from 'js-yaml';
+import { join } from 'path';
+import { parse, Url } from 'url';
 
 export interface CosmosConfiguration extends CosmosClientOptions {
     database: string;
@@ -8,11 +12,14 @@ export interface CosmosConfiguration extends CosmosClientOptions {
 }
 
 export interface VerdaccioConfiguration {
-    storage: PathLike;
-    app: PathLike;
-    host: PathLike;
-    port: number;
-    minUptime: number;
+    maxUptimeSec: number;
+    workingDir: PathLike;
+    installTimeout: number;
+    serverConfig: Config;
+    serverConfigPath: PathLike;
+    serverVersion: string;
+    serverTitle: string;
+    url: Url;
 }
 
 export class Configuration {
@@ -51,12 +58,18 @@ export class Configuration {
             key: process.env.COSMOS_KEY
         };
 
+        const path = join(process.cwd(), process.env.VERDACCIO_CONFIG_FILE_NAME!);
+        const yamlConfig: Config = safeLoad(readFileSync(path, 'utf8'));
+        const yamlUrl: Url = parse(yamlConfig.listen!.toString(), false, true);
         cfg._verdaccio = {
-            storage: process.env.VERDACCIO_STORAGE!,
-            app: process.env.VERDACCIO_APP!,
-            host: process.env.VERDACCIO_HOST!,
-            port: +process.env.VERDACCIO_PORT!,
-            minUptime: +process.env.VERDACCIO_MIN_UPTIME!
+            workingDir: join(process.cwd(), yamlConfig.self_path),
+            maxUptimeSec: +process.env.VERDACCIO_MAX_UPTIME_SEC!,
+            installTimeout: +process.env.VERDACCIO_INSTALL_TIMEOUT_SEC!,
+            serverVersion: '1.0.0',
+            serverTitle: 'Verdaccio Orca',
+            serverConfigPath: path,
+            serverConfig: yamlConfig,
+            url: yamlUrl
         };
         cfg._downloadLocation = process.env.DEFAULT_DOWNLOAD_DIRECTORY!;
         Configuration._current = cfg;

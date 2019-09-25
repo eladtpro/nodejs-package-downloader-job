@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = require("dotenv");
+const fs_1 = require("fs");
+const js_yaml_1 = require("js-yaml");
+const path_1 = require("path");
+const url_1 = require("url");
 class Configuration {
     static get current() {
         if (!Configuration._current)
@@ -25,12 +29,18 @@ class Configuration {
             endpoint: process.env.COSMOS_ENDPOINT,
             key: process.env.COSMOS_KEY
         };
+        const path = path_1.join(process.cwd(), process.env.VERDACCIO_CONFIG_FILE_NAME);
+        const yamlConfig = js_yaml_1.safeLoad(fs_1.readFileSync(path, 'utf8'));
+        const yamlUrl = url_1.parse(yamlConfig.listen.toString(), false, true);
         cfg._verdaccio = {
-            storage: process.env.VERDACCIO_STORAGE,
-            app: process.env.VERDACCIO_APP,
-            host: process.env.VERDACCIO_HOST,
-            port: +process.env.VERDACCIO_PORT,
-            minUptime: +process.env.VERDACCIO_MIN_UPTIME
+            workingDir: path_1.join(process.cwd(), yamlConfig.self_path),
+            maxUptimeSec: +process.env.VERDACCIO_MAX_UPTIME_SEC,
+            installTimeout: +process.env.VERDACCIO_INSTALL_TIMEOUT_SEC,
+            serverVersion: '1.0.0',
+            serverTitle: 'Verdaccio Orca',
+            serverConfigPath: path,
+            serverConfig: yamlConfig,
+            url: yamlUrl
         };
         cfg._downloadLocation = process.env.DEFAULT_DOWNLOAD_DIRECTORY;
         Configuration._current = cfg;

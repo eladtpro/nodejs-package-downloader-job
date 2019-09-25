@@ -3,4 +3,9 @@ declare module global {
     interface String {
         startsWith(term: string): boolean;
     }
+
+    interface String {
+        contains(term: string): boolean;
+    }
+
 }

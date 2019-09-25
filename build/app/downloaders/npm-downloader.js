@@ -2,8 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs_1 = require("fs");
 const util_1 = require("util");
-const Join_1 = require("../utils/Join");
 const package_type_1 = require("../models/package-type");
+const extended_error_1 = require("../utils/extended-error");
+const Join_1 = require("../utils/Join");
 const verdaccio_wrapper_1 = require("../verdaccio/verdaccio-wrapper");
 class NpmDownloader {
     constructor(config) {
@@ -12,7 +13,9 @@ class NpmDownloader {
     }
     download(requests, target) {
         this.verdaccio.completed.on(job => {
-            this.copy(this.verdaccio.config.storage, target, { move: true, recursive: true });
+            if (!this.verdaccio.config.serverConfig.storage)
+                throw new Error('this.verdaccio.config.serverConfig.storage must be valid directory path');
+            this.copy(this.verdaccio.config.serverConfig.storage, target, { move: true, recursive: true });
         });
         this.verdaccio.install(requests);
     }
@@ -20,7 +23,7 @@ class NpmDownloader {
         return new Promise((resolve, reject) => {
             fs_1.readdir(source, { withFileTypes: true }, (error, files) => {
                 if (error) {
-                    reject(new ExtendedError(`'${source}' is not a valid directory path. ${error.message}`, error));
+                    reject(new extended_error_1.ExtendedError({ message: `'${source}' is not a valid directory path.`, error }));
                     return;
                 }
                 const operations = [];

@@ -1,6 +1,6 @@
 {
   "name": "orca",
-  "version": "1.0.0",
+  "version": "1.4.2",
   "description": "artifact manager",
   "main": "./build/app.ts",
   "types": "./build/app.d.ts",
@@ -17,9 +17,14 @@
     "@types/dotenv": "^6.1.1",
     "@types/forever-monitor": "^1.7.4",
     "@types/node": "^12.7.5",
+    "@types/url-parse": "^1.4.3",
     "@verdaccio/types": "^8.1.0",
+    "bootstrap": "^4.3.1",
     "dotenv": "^8.1.0",
     "js-yaml": "^3.13.1",
+    "react": "^16.9.0",
+    "react-dom": "^16.9.0",
+    "redux-thunk": "^2.3.0",
     "verdaccio": "^4.2.2",
     "verdaccio-htpasswd": "^8.1.0"
   },

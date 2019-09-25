@@ -1,4 +1,5 @@
 import { Request } from '../models/request';
+import { ExtendedError } from '../utils/extended-error';
 import { InstallationStatus } from './installation-status';
 
 export class InstallationJob {
@@ -6,7 +7,7 @@ export class InstallationJob {
         this.started = new Date();
         this.modified = new Date();
         this.statuses = new Map<string, InstallationStatus>();
-        this.errors = new Map<string, Error>();
+        this.errors = [];
         this.requests = requests;
 
         this.requests.forEach(request => {
@@ -17,11 +18,11 @@ export class InstallationJob {
     readonly started: Date;
     readonly requests: Request[];
     readonly statuses: Map<string, InstallationStatus>;
-    readonly errors: Map<string, Error>;
+    readonly errors: ExtendedError[];
     modified: Date;
 
     get completed(): boolean {
-        this.statuses.forEach(status => {
+        [...this.statuses.values()].forEach(status => {
             // tslint:disable-next-line: no-bitwise
             if (~status & InstallationStatus.completed)
                 return false;

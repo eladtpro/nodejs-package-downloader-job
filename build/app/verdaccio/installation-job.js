@@ -9,14 +9,14 @@ class InstallationJob {
         this.started = new Date();
         this.modified = new Date();
         this.statuses = new Map();
-        this.errors = new Map();
+        this.errors = [];
         this.requests = requests;
         this.requests.forEach(request => {
             this.statuses.set(request.key, installation_status_1.InstallationStatus.registered);
         }, this);
     }
     get completed() {
-        this.statuses.forEach(status => {
+        [...this.statuses.values()].forEach(status => {
             // tslint:disable-next-line: no-bitwise
             if (~status & installation_status_1.InstallationStatus.completed)
                 return false;

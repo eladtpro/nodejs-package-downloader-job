@@ -1,11 +1,11 @@
-import { copyFile, Dirent, lstat, mkdir, mkdirSync, PathLike, readdir, rename } from 'fs';
+import { copyFile, Dirent, mkdirSync, PathLike, readdir, rename } from 'fs';
 import { promisify } from 'util';
-import { join } from '../utils/Join';
-
 import { VerdaccioConfiguration } from '../configuration';
 import { Downloader } from '../downloader';
 import { PackageType } from '../models/package-type';
 import { Request } from '../models/request';
+import { ExtendedError } from '../utils/extended-error';
+import { join } from '../utils/Join';
 import { VerdaccioWrapper } from '../verdaccio/verdaccio-wrapper';
 
 export class NpmDownloader implements Downloader {
@@ -18,17 +18,19 @@ export class NpmDownloader implements Downloader {
 
     download(requests: Request[], target: PathLike): void {
         this.verdaccio.completed.on(job => {
-            this.copy(this.verdaccio.config.storage, target, { move: true, recursive: true });
+            if (!this.verdaccio.config.serverConfig.storage)
+                throw new Error('this.verdaccio.config.serverConfig.storage must be valid directory path');
+            this.copy(this.verdaccio.config.serverConfig.storage, target, { move: true, recursive: true });
         });
 
         this.verdaccio.install(requests);
     }
 
-    private copy(source: PathLike, target: PathLike, options: { move: boolean, recursive: boolean }): Promise<void> {
-        return new Promise( (resolve, reject) => {
+    private copy(source: PathLike | string, target: PathLike, options: { move: boolean, recursive: boolean }): Promise<void> {
+        return new Promise((resolve, reject) => {
             readdir(source, { withFileTypes: true }, (error: NodeJS.ErrnoException | null, files: Dirent[]) => {
                 if (error) {
-                    reject(new ExtendedError(`'${source}' is not a valid directory path. ${error.message}`, error));
+                    reject(new ExtendedError({ message: `'${source}' is not a valid directory path.`, error }));
                     return;
                 }
 
