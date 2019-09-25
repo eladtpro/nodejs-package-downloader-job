@@ -1,7 +1,7 @@
-import { PathLike  } from 'fs';
+/// <reference types="node" />
+import { PathLike } from 'fs';
 import { PackageType } from './models/package-type';
 import { Request } from './models/request';
-
 export interface Downloader {
     packageType: PackageType;
     /**

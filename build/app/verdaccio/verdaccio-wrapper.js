@@ -1,59 +1,46 @@
-import { ChildProcess, exec, spawn } from 'child_process';
-import { readFileSync } from 'fs';
-import { safeLoad } from 'js-yaml';
-
-// import { Monitor } from 'forever-monitor';
-// import { EventEmitter } from 'events';
-import { VerdaccioConfiguration } from '../configuration';
-import { Request } from '../models/request';
-import '../utils/string.prototype';
-import { Disposable, TypedEvent } from '../utils/typed-event';
-import { InstallationJob } from './installation-job';
-import { InstallationStatus } from './installation-status';
-
-import { join } from 'path';
-import startServer from 'verdaccio';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs_1 = require("fs");
+const js_yaml_1 = require("js-yaml");
+require("../utils/string.prototype");
+const typed_event_1 = require("../utils/typed-event");
+const installation_job_1 = require("./installation-job");
+const installation_status_1 = require("./installation-status");
+const path_1 = require("path");
+const verdaccio_1 = __importDefault(require("verdaccio"));
 // import * as verdaccioServer from 'verdaccio-server';
-
 // const ready: symbol = Symbol('ready');
 // const completed: symbol = Symbol('completed');
-
-export class VerdaccioWrapper /*extends EventEmitter*/ {
-    constructor(config: VerdaccioConfiguration) {
+class VerdaccioWrapper /*extends EventEmitter*/ {
+    constructor(config) {
+        this._busy = false;
+        this.ready = new typed_event_1.TypedEvent();
+        this.error = new typed_event_1.TypedEvent();
+        this.installed = new typed_event_1.TypedEvent();
+        this.completed = new typed_event_1.TypedEvent();
         this.config = config;
     }
-
-    // private verdaccio?: Monitor;
-    private job!: InstallationJob;
-    private _busy: boolean = false;
-    private readonly ready = new TypedEvent<void>();
-    private readonly error = new TypedEvent<{ key: string, error: Error }>();
-    private readonly installed = new TypedEvent<Request>();
-    readonly completed = new TypedEvent<InstallationJob>();
-    readonly config: VerdaccioConfiguration;
-
     get busy() {
         return this._busy;
     }
-
-    install(requests: Request[]) {
+    install(requests) {
         if (this._busy)
             throw Error(`Installation already in progress. ${this.job}`);
-
         try {
             this._busy = true;
-            this.job = new InstallationJob(requests);
-
+            this.job = new installation_job_1.InstallationJob(requests);
             // TODO: handle event handlers disposables
             this.installed.on(request => {
-                this.job.statuses.set(request.key, InstallationStatus.completed);
-
+                this.job.statuses.set(request.key, installation_status_1.InstallationStatus.completed);
                 // EMIT COMPLETE OR TIMEOUT
                 if (this.job.completed)
                     this.completed.emit(this.job);
             });
-            this.error.on((req: { key: string, error: Error }) => {
-                this.job.statuses.set(req.key, InstallationStatus.faulted);
+            this.error.on((req) => {
+                this.job.statuses.set(req.key, installation_status_1.InstallationStatus.faulted);
                 this.job.errors.set(req.key, req.error);
             });
             this.ready.once(() => {
@@ -67,34 +54,30 @@ export class VerdaccioWrapper /*extends EventEmitter*/ {
             });
             // this.start();
             this.ready.emit();
-        } catch (error) {
+        }
+        catch (error) {
             console.error(error);
             this._busy = false;
         }
     }
-
-    private async installOne(request: Request): Promise<void> {
+    async installOne(request) {
         try {
             const version = request.package.version ? `${request.package.version}` : 'latest';
             // const storage = { store: { memory: { limit: 1000 } } };
             const port = 4873;
-            const path = join(process.cwd(), 'config.verdaccio.yaml');
-            const config = safeLoad(readFileSync(path, 'utf8'));
-
-            startServer(
-                config, undefined, path, version, request.package.name,
-                (webServer, addrs, pkgName, pkgVersion) => {
-                    webServer.listen(port, (err: any) => {
-                        if (err)
-                            return console.log('something bad happened', err);
-
-                        console.log('verdaccio running');
-                    });
+            const path = path_1.join(process.cwd(), 'config.verdaccio.yaml');
+            const config = js_yaml_1.safeLoad(fs_1.readFileSync(path, 'utf8'));
+            verdaccio_1.default(config, undefined, path, version, request.package.name, (webServer, addrs, pkgName, pkgVersion) => {
+                webServer.listen(port, (err) => {
+                    if (err)
+                        return console.log('something bad happened', err);
+                    console.log('verdaccio running');
                 });
-        } catch (e) {
+            });
+        }
+        catch (e) {
             console.log(e);
         }
-
         // const command = `npm install ${request.package.name}${version} --registry ${this.config.host}:${this.config.port}`;
         // exec(command)
         //     .on('error', (error: Error) => {
@@ -107,9 +90,7 @@ export class VerdaccioWrapper /*extends EventEmitter*/ {
         //             this.installed.emit(request);
         //     });
     }
-
     // private start(): void {
-
     // startServer(
     //     {
     //         listen: 'http://localhost:4873/',
@@ -120,7 +101,6 @@ export class VerdaccioWrapper /*extends EventEmitter*/ {
     //             console.log('verdaccio running');
     //         });
     //     });
-
     // verdaccioServer.start();
     // this.verdaccio = new Monitor(['node', this.config.app.toString(), '--listen', this.config.port.toString()], {
     //     max: 1,
@@ -155,9 +135,10 @@ export class VerdaccioWrapper /*extends EventEmitter*/ {
     // });
     // this.verdaccio.start();
     // }
-
-    private shutdown() {
+    shutdown() {
         this._busy = false;
         // verdaccioServer.stop();
     }
 }
+exports.VerdaccioWrapper = VerdaccioWrapper;
+//# sourceMappingURL=verdaccio-wrapper.js.map

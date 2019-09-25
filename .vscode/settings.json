@@ -1,8 +1,18 @@
 {
     "cSpell.words": [
+        "Bootstrapper",
+        "before",
         "dirent",
+        "dirnet",
+        "downloaders",
+        "es",
+        "function",
+        "interop",
         "listeners",
-        "oncer"
+        "module",
+        "oncer",
+        "paren",
+        "space"
     ],
     "cSpell.ignoreWords": [
         "nuget"

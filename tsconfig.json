@@ -1,16 +1,26 @@
 {
     "compilerOptions": {
-        "outDir": "bin",
+        "target": "esnext",
+        "module": "commonjs",
+        "outDir": "./build",
+        "declaration": true,
         "strict": true,
         "sourceMap": true,
-        "noImplicitAny": true,
-        "module": "commonjs",
-        "target": "es5",
+        "noImplicitAny": false,
+        // "noImplicitAny": true,
+        // "skipLibCheck": true,
+        // "skipDefaultLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "allowJs": false,
         "experimentalDecorators": true,
         "strictNullChecks": true,
+        "lib": [ "es2018" ],
         // "jsx": "react",
-        "allowJs": true,
-        "lib": [ "es2015" ]
+        "typeRoots": [
+            "./node_modules/@verdaccio/types/lib/verdaccio",
+            "./node_modules/@types"
+          ]
     },
     "include": [
         "app.ts",

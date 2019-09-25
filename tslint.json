@@ -32,19 +32,15 @@
                     "private-constructor",
                     "protected-constructor",
                     "public-constructor",
-             
                     "private-static-field",
                     "protected-static-field",
                     "public-static-field",
-             
                     "private-instance-field",
                     "protected-instance-field",
                     "public-instance-field",
-             
                     "private-static-method",
                     "protected-static-method",
                     "public-static-method",
-             
                     "public-instance-method",
                     "protected-instance-method",
                     "private-instance-method"
@@ -52,6 +48,7 @@
                 "alphabetize": false
             }
         ],
+        "space-before-function-paren": false,
         "variable-name": {
             "options": [
                 "ban-keywords",

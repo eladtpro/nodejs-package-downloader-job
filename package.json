@@ -2,7 +2,8 @@
   "name": "orca",
   "version": "1.0.0",
   "description": "artifact manager",
-  "main": "app.ts",
+  "main": "./build/app.ts",
+  "types": "./build/app.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
@@ -14,9 +15,16 @@
   "dependencies": {
     "@azure/cosmos": "^3.2.0",
     "@types/dotenv": "^6.1.1",
+    "@types/forever-monitor": "^1.7.4",
     "@types/node": "^12.7.5",
+    "@verdaccio/types": "^8.1.0",
     "dotenv": "^8.1.0",
-    "verdaccio": "^4.2.2"
+    "js-yaml": "^3.13.1",
+    "verdaccio": "^4.2.2",
+    "verdaccio-htpasswd": "^8.1.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/js-yaml": "^3.12.1",
+    "typescript": "^3.6.3"
+  }
 }

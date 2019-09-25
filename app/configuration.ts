@@ -12,16 +12,18 @@ export interface VerdaccioConfiguration {
     app: PathLike;
     host: PathLike;
     port: number;
+    minUptime: number;
 }
 
-export default class Configuration {
+export class Configuration {
     private static _current: Configuration;
     private _cosmos!: CosmosConfiguration;
     private _verdaccio!: VerdaccioConfiguration;
+    private _downloadLocation!: PathLike;
 
     static get current(): Configuration {
         if (!Configuration._current)
-            Configuration._current = Configuration.init();
+            throw new Error('configuration uninitialized');
 
         return Configuration._current;
     }
@@ -34,7 +36,11 @@ export default class Configuration {
         return this._verdaccio;
     }
 
-    private static init(): Configuration {
+    get downloadLocation(): PathLike {
+        return this._downloadLocation;
+    }
+
+    static init(): Configuration {
         config();
 
         const cfg = new Configuration();
@@ -49,9 +55,11 @@ export default class Configuration {
             storage: process.env.VERDACCIO_STORAGE!,
             app: process.env.VERDACCIO_APP!,
             host: process.env.VERDACCIO_HOST!,
-            port: +process.env.VERDACCIO_PORT!
+            port: +process.env.VERDACCIO_PORT!,
+            minUptime: +process.env.VERDACCIO_MIN_UPTIME!
         };
-
+        cfg._downloadLocation = process.env.DEFAULT_DOWNLOAD_DIRECTORY!;
+        Configuration._current = cfg;
         return cfg;
     }
 }
