@@ -1,6 +1,6 @@
 import { copyFile, Dirent, mkdirSync, PathLike, readdir, rename } from 'fs';
 import { promisify } from 'util';
-import { VerdaccioConfiguration } from '../configuration';
+import { NpmsApiConfiguration, VerdaccioConfiguration } from '../bootstrap/configuration';
 import { Downloader } from '../downloader';
 import { PackageType } from '../models/package-type';
 import { Request } from '../models/request';
@@ -9,8 +9,8 @@ import { join } from '../utils/Join';
 import { VerdaccioWrapper } from '../verdaccio/verdaccio-wrapper';
 
 export class NpmDownloader implements Downloader {
-    constructor(config: VerdaccioConfiguration) {
-        this.verdaccio = new VerdaccioWrapper(config);
+    constructor(config: VerdaccioConfiguration, npmConfig: NpmsApiConfiguration) {
+        this.verdaccio = new VerdaccioWrapper(config, npmConfig);
     }
     private verdaccio: VerdaccioWrapper;
 

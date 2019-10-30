@@ -1,5 +1,5 @@
 import { Container, ContainerResponse, CosmosClient, Database, FeedOptions, FeedResponse, SqlQuerySpec } from '@azure/cosmos';
-import { Configuration, CosmosConfiguration } from '../configuration';
+import { Configuration, CosmosConfiguration } from '../bootstrap/configuration';
 import { Request } from '../models/request';
 import { RequestStatus } from '../models/request-status';
 

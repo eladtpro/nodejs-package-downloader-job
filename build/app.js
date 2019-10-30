@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-// import './app/global';
-const bootstrapper_1 = require("./app/bootstrapper");
-const configuration_1 = require("./app/configuration");
-const adapter_1 = require("./app/db/adapter");
-const npm_downloader_1 = require("./app/downloaders/npm-downloader");
-const request_status_1 = require("./app/models/request-status");
+const bootstrapper_1 = require("./bootstrap/bootstrapper");
+const configuration_1 = require("./bootstrap/configuration");
+const adapter_1 = require("./db/adapter");
+const npm_downloader_1 = require("./downloaders/npm-downloader");
+const package_1 = require("./models/package");
+const request_status_1 = require("./models/request-status");
 class App {
     get adapter() {
         if (!this._adapter)
@@ -14,8 +14,10 @@ class App {
     }
     execute() {
         this.adapter.fetch(request_status_1.RequestStatus.Pending, { maxItemCount: 10 }).then(result => {
-            const downloader = new npm_downloader_1.NpmDownloader(configuration_1.Configuration.current.verdaccio);
-            downloader.download(result.resources, configuration_1.Configuration.current.downloadLocation);
+            const downloader = new npm_downloader_1.NpmDownloader(configuration_1.Configuration.current.verdaccio, configuration_1.Configuration.current.npmsApi);
+            result.resources.forEach(r => r.package = new package_1.Package(r.package.name, r.package.version));
+            // downloader.download(result.resources, Configuration.current.downloadLocation);
+            downloader.download([result.resources[0]], configuration_1.Configuration.current.downloadLocation);
             console.log(result);
         });
     }

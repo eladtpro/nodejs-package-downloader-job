@@ -1,29 +1,31 @@
 import { ListenAddress } from '@verdaccio/types';
-import { ChildProcess, spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { Server } from 'http';
 // @ts-ignore
 import startServer from 'verdaccio';
-import { VerdaccioConfiguration } from '../configuration';
+import { NpmsApiConfiguration, VerdaccioConfiguration } from '../bootstrap/configuration';
+import { NpmVersionUpdater } from '../bootstrap/npm-version-updater';
+import { Package } from '../models/package';
+import { PackageInstallationState } from '../models/package-installation-state';
 import { Request } from '../models/request';
 import { ExtendedError } from '../utils/extended-error';
-import '../utils/string.prototype';
 import { Disposable, TypedEvent } from '../utils/typed-event';
 import { InstallationJob } from './installation-job';
 import { InstallationStatus } from './installation-status';
 
-// const ready: symbol = Symbol('ready');
-// const completed: symbol = Symbol('completed');
-
 export class VerdaccioWrapper /*extends EventEmitter*/ {
-    constructor(config: VerdaccioConfiguration) {
+    constructor(config: VerdaccioConfiguration, npmConfig: NpmsApiConfiguration) {
         this.config = config;
+        this.npmConfig = npmConfig;
     }
 
     private job!: InstallationJob;
     private _busy: boolean = false;
     private readonly ready = new TypedEvent<void>();
     private readonly error = new TypedEvent<ExtendedError>();
-    private readonly installed = new TypedEvent<Request>();
+    private readonly installed = new TypedEvent<PackageInstallationState>();
+    private readonly _handlers: Disposable[] = [];
+    private readonly npmConfig: NpmsApiConfiguration;
     readonly completed = new TypedEvent<InstallationJob>();
     readonly config: VerdaccioConfiguration;
 
@@ -31,32 +33,52 @@ export class VerdaccioWrapper /*extends EventEmitter*/ {
         return this._busy;
     }
 
+    set disposable(handler: Disposable) {
+        if (this._handlers.indexOf(handler) < 0)
+            this._handlers.push(handler);
+    }
+
     install(requests: Request[]) {
         if (this._busy)
             throw Error(`Installation already in progress. ${this.job}`);
         try {
             this._busy = true;
-            this.job = new InstallationJob(requests);
-
-            // TODO: handle event handlers disposables
-            this.installed.on(request => {
-                this.job.statuses.set(request.key, InstallationStatus.completed);
-
-                // EMIT COMPLETE OR TIMEOUT
+            this.job = new InstallationJob(requests.map(request => request.package));
+            this.disposable = this.installed.on(state => {
+                this.job.set(state);
+                // TODO: EMIT COMPLETE OR TIMEOUT
+                this.job.pending.forEach(pkg => this.installOne(pkg));
                 if (this.job.completed)
                     this.completed.emit(this.job);
-            });
-            this.error.on((error: ExtendedError) => {
-                if (error.data && error.data.key)
-                    this.job.statuses.set(error.data.key, InstallationStatus.faulted);
-                this.job.errors.push(error);
-            });
+            }),
+                this.disposable = this.error.on((error: ExtendedError) => {
+                    if (error.data && error.data.key)
+                        this.job.update(error.data.key, InstallationStatus.warnings, error);
+                    else
+                        throw error;
+                }),
+                this.disposable = this.completed.on((job: InstallationJob) => {
+                    try {
+                        // tslint:disable-next-line: curly
+                        while (this._handlers.length > 0) {
+                            try {
+                                const dis: Disposable | undefined = this._handlers.shift();
+                                if (dis)
+                                    dis.dispose();
+                            } catch (error) {
+                                console.error(error);
+                                throw error;
+                            }
+                        }
+                    } finally {
+                        this._busy = false;
+                    }
+                });
             this.ready.once(() => {
-                requests.forEach(request => this.installOne(request));
-            });
-            this.completed.on((job: InstallationJob) => {
-                console.log(job);
-                this._busy = false;
+                const updater: NpmVersionUpdater = new NpmVersionUpdater(this.config.workingDir, this.npmConfig);
+                updater.matchVersions('npm').then(() => {
+                    this.job.pending.forEach(pkg => this.installOne(pkg));
+                });
             });
             this.startVerdaccio();
         } catch (error) {
@@ -69,51 +91,75 @@ export class VerdaccioWrapper /*extends EventEmitter*/ {
         }
     }
 
-    private installOne(request: Request) {
-        const version = request.package.version ? `@${request.package.version}` : '';
-        const packageQDN = `${request.package.name}${version}`;
-        const command = `npm install ${packageQDN} --registry ${this.config.url.href}`;
+    private installOne(state: PackageInstallationState): ChildProcessWithoutNullStreams {
+        const command = `npm install ${state.package.qualifiedName} --registry ${this.config.url.href}`;
         console.info(command);
-        const install = this.spawn(
-            'npm',
-            ['install', packageQDN, '--registry', this.config.url.href!]);
+        const install = spawn('npm', ['install', state.package.qualifiedName, '--registry', this.config.url.href!],
+            { shell: true, cwd: this.config.workingDir.toString(), timeout: this.config.installTimeout });
 
-        install.stderr.on('data', (error: any) => {
-            this.error.emit(new ExtendedError({ key: request.key, message: error.toString() }));
-            // if (error.toString().contains('npm update check failed'))
-            //     console.log('npm i -g npm');
-        });
+        this.job.update(state.package.qualifiedName, InstallationStatus.in_process);
+
+        install.stderr.on('data', (chunk: any) => {
+            const message = chunk.toString();
+            console.error(message);
+            state.errors.push(new ExtendedError({ message }));
+            state.status = (message && message.startsWith('ERR!')) ? InstallationStatus.error : InstallationStatus.warnings;
+            this.installed.emit(state);
+            if (InstallationStatus.error === state.status)
+                install.kill('SIGTERM');
+        }).pipe(process.stderr);
+
         install.stdout.on('data', (chunk: any) => {
             const message = chunk.toString();
-            if (message && message.toString().startsWith(`+ ${packageQDN}`)) {
-                this.installed.emit(request);
-                install.kill('SIGSTOP');
+            console.info(message);
+            if (message && message.toString().startsWith(`+ ${state.package.qualifiedName}`)) {
+                state.status = InstallationStatus.success;
+                this.installed.emit(state);
+                install.kill('SIGTERM');
             }
         });
         install.on('exit', (code: number | null, signal: string | null) => {
+            console.warn(`spawn exit Unknown error code ${code} - ${signal}`);
             if (code && 0 !== code)
-                this.error.emit(new ExtendedError({ key: request.key, message: `Unknown error code ${code} - ${signal} for command '${command}'` }));
-            else
-                this.installed.emit(request);
-        });
-    }
-    private spawn(command: string, args?: ReadonlyArray<string>): ChildProcessWithoutNullStreams {
-        const install = spawn(command, args,
-            { shell: true, cwd: this.config.workingDir.toString(), timeout: this.config.installTimeout });
-        install.on('exit', (code: number | null, signal: string | null) => {
-            console.warn(`spawn exit Unknown error code ${code} - ${signal}`)
-        });
-
-        install.stderr.on('data', (error: any) => {
-            console.error(error.toString());
-        });
-        install.stdout.on('data', (chunk: any) => {
-            console.info(chunk.toString());
+                this.error.emit(new ExtendedError({ key: state.package.qualifiedName, message: `Unknown error code ${code} - ${signal} for command '${command}'` }));
         });
 
         return install;
     }
+    private onVerdaccioData(chunk: string): void {
+        const template = (substitute: string) => `[^.?!]*(?<=[.?\s!])${substitute}(?=[\s.?!])[^.?!]*[.?!]`;
+        try {
+            if (chunk.includes('npm update check failed'))
+                console.warn('npm i -g npm');
+            // execSync('npm install npm', { stdio: 'inherit' });
+            else if (chunk.match(template('You must install peer dependencies yourself'))) {
+                const start: number = chunk.indexOf('requires a peer of') + 'requires a peer of'.length;
+                const end: number = chunk.indexOf('- ', start);
+                const dependency = chunk.substring(start, end).trim();
 
+                const parts: string[] = dependency.split('@');
+
+                let name: string = '';
+                let version: string | undefined;
+                // TODO: refactor
+                if (parts.length < 1)
+                    throw new Error(`Invalid package name '${dependency}'.`);
+                if (parts.length === 1) {
+                    name = parts[0];
+                    version = 'latest';
+                } else if (parts.length > 1) {
+                    for (let i = 0; i < parts.length - 1; i++)
+                        name += parts[i];
+                    version = parts[parts.length - 1];
+                }
+
+                this.job.add(new PackageInstallationState(new Package(name, version), InstallationStatus.registered));
+            }
+
+        } catch (error) {
+            this.error.emit(new ExtendedError({ error }));
+        }
+    }
 
     private startVerdaccio(): void {
         startServer(

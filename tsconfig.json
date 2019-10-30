@@ -18,12 +18,11 @@
         "lib": [ "es2018" ],
         // "jsx": "react",
         "typeRoots": [
-            "./node_modules/@verdaccio/types/lib/verdaccio",
+            "./node_modules/@verdaccio/types",
             "./node_modules/@types"
           ]
     },
     "include": [
-        "app.ts",
         "app/**/*"
     ],
     "exclude": [

@@ -1,5 +1,6 @@
+import { Adapter } from '../db/adapter';
 import { Configuration } from './configuration';
-import { Adapter } from './db/adapter';
+import { NpmVersionUpdater } from './npm-version-updater';
 
 export class Bootstrapper {
     static async bootstrap() {
@@ -15,6 +16,11 @@ export class Bootstrapper {
         const cfg: Configuration = Configuration.init();
         console.log(cfg);
 
+        // check package update verdaccio npm
+
         await Adapter.createIfNotExists();
+
+        const updater: NpmVersionUpdater  = new NpmVersionUpdater(process.cwd(), Configuration.current.npmsApi);
+        await updater.matchVersions('verdaccio');
     }
 }
