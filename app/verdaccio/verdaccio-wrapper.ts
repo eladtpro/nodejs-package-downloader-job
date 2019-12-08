@@ -101,12 +101,18 @@ export class VerdaccioWrapper /*extends EventEmitter*/ {
 
         install.stderr.on('data', (chunk: any) => {
             const message = chunk.toString();
-            console.error(message);
-            state.errors.push(new ExtendedError({ message }));
             state.status = (message && message.startsWith('ERR!')) ? InstallationStatus.error : InstallationStatus.warnings;
+            switch (state.status) {
+                case InstallationStatus.warnings:
+                    console.warn(message);
+                    break;
+                case InstallationStatus.error:
+                    state.errors.push(new ExtendedError({ message }));
+                    console.error(message);
+                    install.kill('SIGTERM');
+                    break;
+            }
             this.installed.emit(state);
-            if (InstallationStatus.error === state.status)
-                install.kill('SIGTERM');
         }).pipe(process.stderr);
 
         install.stdout.on('data', (chunk: any) => {
@@ -165,13 +171,13 @@ export class VerdaccioWrapper /*extends EventEmitter*/ {
         startServer(
             this.config.serverConfig, undefined, this.config.serverConfigPath, this.config.serverVersion, this.config.serverTitle,
             (webServer: Server, addrs: ListenAddress, name: string, version: string) => {
-                console.log('Verdaccio server created', webServer, addrs, name, version);
+                // console.log('Verdaccio server created', webServer, addrs, name, version);
                 webServer.on('error', (err: Error) => {
                     console.error(err);
                     this.error.emit(new ExtendedError({ error: err }));
                 });
                 webServer.listen(+this.config.url.port!, /*this.config.url.host,*/() => {
-                    console.log('verdaccio running');
+                    console.log(`verdaccio running on ${this.config.url}`);
                     this.ready.emit();
                 });
                 this.completed.on(() => webServer.close());

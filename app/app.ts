@@ -28,4 +28,5 @@ Bootstrapper.bootstrap()
   .then(() => {
     const app = new App();
     app.execute();
-  }).catch(e => console.log(e));
+  })
+  .catch(console.error);

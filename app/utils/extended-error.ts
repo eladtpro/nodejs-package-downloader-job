@@ -2,6 +2,7 @@ export interface Data {
     message?: string,
     error?: Error,
     key?: string
+    body?: any
 }
 
 export class ExtendedError extends Error {

@@ -1,7 +1,5 @@
 import { getInternalError } from '@verdaccio/commons-api';
 import { Callback, IPluginAuth, Logger } from '@verdaccio/types';
-
-
 // interface IPluginAuth extends IPlugin {
 //     login_url?: string;
 //     authenticate(user: string, password: string, cb: Callback): void;

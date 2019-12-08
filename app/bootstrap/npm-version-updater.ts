@@ -8,6 +8,7 @@ import { Package } from '../models/package';
 import { PackageType } from '../models/package-type';
 import { NpmsApiConfiguration } from './configuration';
 import { PackageInfo } from './package-info';
+import { ExtendedError } from '../utils/extended-error';
 
 export interface Versions {
     local: Package[];
@@ -23,13 +24,26 @@ export class NpmVersionUpdater {
     private readonly config: NpmsApiConfiguration;
 
     async matchVersions(...packageNames: string[]) {
-        const result: Package[][] = await this.getVersions(...packageNames);
-        const versions = { local: result[0], online: result[1] };
-        versions.local.forEach((pkg, index) => {
-            const onlinePackage = versions.online.find(p => p.name === pkg.name);
-            if (onlinePackage && pkg.version !== onlinePackage.version)
-                execSync(`npm install ${onlinePackage.name}@${onlinePackage.version}`, { stdio: 'inherit' });
-        });
+        this.getVersions(...packageNames)
+            .then((result: Package[][]) => {
+                const versions = { local: result[0], online: result[1] };
+                versions.local.forEach((pkg, index) => {
+                    const onlinePackage = versions.online.find(p => p.name === pkg.name);
+                    if (onlinePackage && pkg.version !== onlinePackage.version)
+                        execSync(`npm install ${onlinePackage.name}@${onlinePackage.version}`, { stdio: 'inherit' });
+                });
+            })
+            .catch(reason => {
+                console.error(reason);
+            });
+
+        // const result: Package[][] = await this.getVersions(...packageNames);
+        // const versions = { local: result[0], online: result[1] };
+        // versions.local.forEach((pkg, index) => {
+        //     const onlinePackage = versions.online.find(p => p.name === pkg.name);
+        //     if (onlinePackage && pkg.version !== onlinePackage.version)
+        //         execSync(`npm install ${onlinePackage.name}@${onlinePackage.version}`, { stdio: 'inherit' });
+        // });
     }
 
     private async getVersions(...packageNames: string[]): Promise<Package[][]> {
@@ -85,7 +99,7 @@ export class NpmVersionUpdater {
 
             const clientRequest: ClientRequest = request(options, (response: IncomingMessage) => {
                 if (response.statusCode !== 200)
-                    throw response;
+                    throw new ExtendedError({ message: `${response.statusCode}: ${response.statusMessage} - ${this.config.url.href}`, body: response })
 
                 response.on('data', (chunk: any) => {
                     incoming += chunk.toString();

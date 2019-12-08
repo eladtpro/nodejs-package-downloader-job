@@ -10,11 +10,10 @@ export class Bootstrapper {
         })
         .on('uncaughtException', err => {
           console.error(err, 'Uncaught Exception thrown');
-          process.exit(1);
         });
 
         const cfg: Configuration = Configuration.init();
-        console.log(cfg);
+        // console.log(cfg);
 
         // check package update verdaccio npm
 
