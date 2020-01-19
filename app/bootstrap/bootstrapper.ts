@@ -5,10 +5,10 @@ import { NpmVersionUpdater } from './npm-version-updater';
 export class Bootstrapper {
     static async bootstrap() {
         process
-        .on('unhandledRejection', (reason, p) => {
+        .once('unhandledRejection', (reason, p) => {
           console.error(reason, 'Unhandled Rejection at Promise', p);
         })
-        .on('uncaughtException', err => {
+        .once('uncaughtException', err => {
           console.error(err, 'Uncaught Exception thrown');
         });
 
